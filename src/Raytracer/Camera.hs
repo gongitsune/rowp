@@ -1,5 +1,6 @@
-{-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE OverloadedRecordDot #-}
+{-# LANGUAGE NoFieldSelectors #-}
 
 module Raytracer.Camera (
     getRay,
@@ -42,8 +43,8 @@ createCamera (CameraCreateInfo{origin, viewportWidth, viewportHeight, focalLengt
     v = V3 0 viewportHeight 0
 
 getRay :: Camera -> Float -> Float -> Ray
-getRay (Camera{origin, lowerLeftCorner, horizontal, vertical}) u v =
+getRay c u v =
     Ray
-        { origin = origin
-        , direction = lowerLeftCorner + u *^ horizontal + v *^ vertical - origin
+        { origin = c.origin
+        , direction = c.lowerLeftCorner + u *^ c.horizontal + v *^ c.vertical - c.origin
         }
