@@ -1,7 +1,7 @@
 module Main where
 
-import qualified Renderer (render)
+import  Raytracer.Renderer (render)
 
 main :: IO ()
 main = do
-  Renderer.render
+  render
