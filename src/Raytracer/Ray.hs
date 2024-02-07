@@ -1,11 +1,10 @@
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE OverloadedRecordDot #-}
-{-# LANGUAGE NoFieldSelectors #-}
 
-module Raytracer.Ray (
-    Ray (..),
+module Raytracer.Ray
+  ( Ray (..),
     at,
-) where
+  )
+where
 
 import Linear.V3 (V3)
 import Linear.Vector ((*^))

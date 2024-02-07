@@ -60,13 +60,13 @@ library
 
     -- Modules exported by the library.
     exposed-modules:  Raytracer.Renderer
-                     ,Raytracer.Ray
                      ,Raytracer.Camera
                      ,Raytracer.Hittable
                      ,Raytracer.Scene
 
     -- Modules included in this library but not exported.
-    -- other-modules:
+    other-modules:    Common.Interval
+                     ,Raytracer.Ray
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
