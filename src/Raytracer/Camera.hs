@@ -4,48 +4,72 @@
 
 module Raytracer.Camera
   ( getRay,
+    rayColor,
     createCamera,
     CameraCreateInfo (..),
     Camera,
   )
 where
 
+import Control.Lens ((^.))
 import GHC.Generics (Generic)
-import Linear.V3 (V3 (..))
-import Linear.Vector ((*^))
+import Linear.Metric (normalize)
+import Linear.V3 (V3 (..), _y)
+import Linear.Vector (lerp, (*^), (^/))
+import Raytracer.Hittable (HitRecord (..), HittableType, hit)
 import Raytracer.Ray (Ray (..))
+import Utility.Interval (Interval (..))
 
 data Camera = Camera
   { origin :: !(V3 Float),
-    lowerLeftCorner :: !(V3 Float),
-    horizontal :: !(V3 Float),
-    vertical :: !(V3 Float)
+    pixel00Loc :: !(V3 Float),
+    pixelDeltaU :: !(V3 Float),
+    pixelDeltaV :: !(V3 Float)
   }
   deriving (Show, Generic)
 
 data CameraCreateInfo = CameraCreateInfo
   { origin :: !(V3 Float),
-    viewportWidth :: !Float,
+    aspectRatio :: !Float,
+    imageHeight :: !Int,
+    imageWidth :: !Int,
     viewportHeight :: !Float,
     focalLength :: !Float
   }
   deriving (Show, Generic)
 
 createCamera :: CameraCreateInfo -> Camera
-createCamera (CameraCreateInfo {origin, viewportWidth, viewportHeight, focalLength}) =
+createCamera info =
   Camera
-    { origin = origin,
-      horizontal = h,
-      vertical = v,
-      lowerLeftCorner = origin - 0.5 *^ h - 0.5 *^ v - V3 0 0 focalLength
+    { origin = info.origin,
+      pixel00Loc,
+      pixelDeltaU,
+      pixelDeltaV
     }
   where
-    h = V3 viewportWidth 0 0
-    v = V3 0 viewportHeight 0
+    viewportWidth = info.aspectRatio * info.viewportHeight
+    viewportU = V3 viewportWidth 0 0
+    viewportV = V3 0 info.viewportHeight 0
+    viewportUL = info.origin - (viewportU / 2) - (viewportV / 2) - V3 0 0 info.focalLength
+    pixelDeltaU = viewportU ^/ fromIntegral info.imageWidth
+    pixelDeltaV = viewportV ^/ fromIntegral info.imageHeight
+    pixel00Loc = viewportUL + 0.5 * (pixelDeltaU + pixelDeltaV)
 
-getRay :: Camera -> Float -> Float -> Ray
-getRay c u v =
+getRay :: Camera -> Int -> Int -> Ray
+getRay c x y =
   Ray
     { origin = c.origin,
-      direction = c.lowerLeftCorner + u *^ c.horizontal + v *^ c.vertical - c.origin
+      direction = pixelCenter - c.origin
     }
+  where
+    pixelCenter = c.pixel00Loc + (fromIntegral x *^ c.pixelDeltaU) + (fromIntegral y *^ c.pixelDeltaV)
+
+rayColor :: Ray -> HittableType -> V3 Float
+rayColor ray world'
+  | Just rec <- hit world' ray (Interval 0 (1 / 0)) =
+      0.5 * (rec.normal + 1)
+  | otherwise =
+      let t = 0.5 * (unitDirection ^. _y + 1.0)
+       in lerp t (V3 0.5 0.7 1.0) (V3 1 1 1)
+  where
+    unitDirection = normalize ray.direction

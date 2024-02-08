@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE NoFieldSelectors #-}
 
-module Common.Interval
+module Utility.Interval
   ( Interval (..),
     contains,
     surrounds,

@@ -9,12 +9,12 @@ module Raytracer.Hittable
   )
 where
 
-import Common.Interval (Interval (..), surrounds)
 import Linear.Metric (dot)
 import Linear.V3 (V3 (..))
 import Linear.Vector ((^/))
 import Raytracer.Ray (Ray (..))
 import Raytracer.Ray qualified as Ray
+import Utility.Interval (Interval (..), surrounds)
 
 data HitRecord = HitRecord
   { p :: !(V3 Float),

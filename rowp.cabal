@@ -65,7 +65,7 @@ library
                      ,Raytracer.Scene
 
     -- Modules included in this library but not exported.
-    other-modules:    Common.Interval
+    other-modules:    Utility.Interval
                      ,Raytracer.Ray
 
     -- LANGUAGE extensions used by modules in this package.
