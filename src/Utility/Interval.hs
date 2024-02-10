@@ -28,3 +28,9 @@ empty = Interval (1 / 0) ((-1) / 0)
 
 universe :: (Fractional a, Ord a) => Interval a
 universe = Interval ((-1) / 0) (1 / 0)
+
+clamp :: (Ord a) => Interval a -> a -> a
+clamp i x
+  | x < i.lower = i.lower
+  | x > i.upper = i.upper
+  | otherwise = x
