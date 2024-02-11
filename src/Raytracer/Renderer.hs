@@ -2,16 +2,16 @@
 
 module Raytracer.Renderer (render) where
 
-import Codec.Picture (DynamicImage, savePngImage, withImage)
-import Codec.Picture.Types (DynamicImage (..), Image, Pixel (..), PixelRGB8 (..))
+import Codec.Picture (generateImage, savePngImage)
+import Codec.Picture.Types (DynamicImage (..), PixelRGB8 (..))
 import Control.Lens ((^.))
 import GHC.Float.RealFracMethods (floorFloatInt)
 import Linear.V3 (V3 (..), _x, _y, _z)
-import Raytracer.Camera (Camera, CameraCreateInfo (..), createCamera, getRay, rayColor)
+import Raytracer.Camera (Camera, CameraCreateInfo (..), createCamera, rayColor)
 import Raytracer.Hittable (HittableType (..))
 import Raytracer.Scene (simpleScene)
 import System.Environment (getArgs)
-import System.Random.Stateful (StatefulGen, mkStdGen, newIOGenM, runStateGen)
+import System.Random.Stateful (mkStdGen)
 
 aspectRatio :: Float
 aspectRatio = 16.0 / 9.0
@@ -31,7 +31,8 @@ camera =
         imageHeight = imgHeight,
         imageWidth = imgWidth,
         viewportHeight = 2.0,
-        focalLength = 1.0
+        focalLength = 1.0,
+        spp = 20
       }
 
 world :: HittableType
@@ -41,14 +42,13 @@ render :: IO ()
 render = do
   [path] <- getArgs
 
-  gen <- newIOGenM $ mkStdGen 0
-  img <- withImage imgWidth imgHeight (pixelFn gen)
+  let img = generateImage pixelFn imgWidth imgHeight
   savePngImage path (ImageRGB8 img)
 
 pixelFn :: Int -> Int -> PixelRGB8
-pixelFn x y = do
-  pixel <- rayColor camera g (x, y) world
-  return $ toPixel pixel
+pixelFn x y = toPixel $ rayColor g camera (x, imgHeight - y - 1) world
+  where
+    g = mkStdGen $ x * imgHeight + y
 
 toPixel :: V3 Float -> PixelRGB8
 toPixel c =

@@ -18,14 +18,15 @@ import Linear.V3 (V3 (..), _y)
 import Linear.Vector (lerp, (*^), (^/))
 import Raytracer.Hittable (HitRecord (..), HittableType, hit)
 import Raytracer.Ray (Ray (..))
-import System.Random.Stateful (StatefulGen, uniformRM)
+import System.Random.Stateful (RandomGen, StatefulGen, runStateGen_, uniformRM)
 import Utility.Interval (Interval (..))
 
 data Camera = Camera
   { origin :: !(V3 Float),
     pixel00Loc :: !(V3 Float),
     pixelDeltaU :: !(V3 Float),
-    pixelDeltaV :: !(V3 Float)
+    pixelDeltaV :: !(V3 Float),
+    spp :: !Int
   }
   deriving (Show)
 
@@ -35,7 +36,8 @@ data CameraCreateInfo = CameraCreateInfo
     imageHeight :: !Int,
     imageWidth :: !Int,
     viewportHeight :: !Float,
-    focalLength :: !Float
+    focalLength :: !Float,
+    spp :: !Int
   }
   deriving (Show)
 
@@ -45,7 +47,8 @@ createCamera info =
     { origin = info.origin,
       pixel00Loc,
       pixelDeltaU,
-      pixelDeltaV
+      pixelDeltaV,
+      spp = info.spp
     }
   where
     viewportWidth = info.aspectRatio * info.viewportHeight
@@ -56,8 +59,8 @@ createCamera info =
     pixelDeltaV = viewportV ^/ fromIntegral info.imageHeight
     pixel00Loc = viewportUL + 0.5 * (pixelDeltaU + pixelDeltaV)
 
-getRay :: (StatefulGen g m) => Camera -> g -> Int -> Int -> m Ray
-getRay c g x y = do
+getRay :: (StatefulGen g m) => Camera -> Int -> Int -> g -> m Ray
+getRay c x y g = do
   sample <- pixelSampleSquare c g
   let pixelCenter = c.pixel00Loc + (fromIntegral x *^ c.pixelDeltaU) + (fromIntegral y *^ c.pixelDeltaV)
       pixelSample = pixelCenter + sample
@@ -73,17 +76,16 @@ pixelSampleSquare c g = do
   v <- uniformRM (0, 1) g
   return $ (u *^ c.pixelDeltaU) + (v *^ c.pixelDeltaV)
 
-rayColor :: (StatefulGen g m) => Camera -> g -> (Int, Int) -> HittableType -> m (V3 Float)
-rayColor c g (x, y) world = do
-  rays <- replicateM 100 $ getRay c g x y
-  let color = foldl (\acc ray -> acc + rayColor' ray) (V3 0 0 0) rays
-  return $ color ^/ 100
+rayColor :: (RandomGen g) => g -> Camera -> (Int, Int) -> HittableType -> V3 Float
+rayColor g c (x, y) world = runStateGen_ g $ \g' -> do
+  rays <- replicateM c.spp (getRay c x y g')
+  let color = foldl (\acc r -> acc + sampleRay r) (V3 0 0 0) rays
+  return $ color ^/ fromIntegral c.spp
   where
-    rayColor' ray
+    sampleRay ray
       | Just rec <- hit world ray (Interval 0 (1 / 0)) =
           0.5 * (rec.normal + 1)
       | otherwise =
-          let t = 0.5 * (unitDirection ^. _y + 1.0)
+          let unitDirection = normalize ray.direction
+              t = 0.5 * (unitDirection ^. _y + 1.0)
            in lerp t (V3 0.5 0.7 1.0) (V3 1 1 1)
-      where
-        unitDirection = normalize ray.direction
