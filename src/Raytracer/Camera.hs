@@ -3,8 +3,7 @@
 {-# LANGUAGE NoFieldSelectors #-}
 
 module Raytracer.Camera
-  ( getRay,
-    rayColor,
+  ( rayColor,
     createCamera,
     CameraCreateInfo (..),
     Camera,
@@ -12,7 +11,6 @@ module Raytracer.Camera
 where
 
 import Control.Lens ((^.))
-import Control.Monad (replicateM)
 import Linear.Metric (normalize)
 import Linear.V3 (V3 (..), _y)
 import Linear.Vector (lerp, (*^), (^/))
@@ -20,6 +18,7 @@ import Raytracer.Hittable (HitRecord (..), HittableType, hit)
 import Raytracer.Ray (Ray (..))
 import System.Random.Stateful (RandomGen, StatefulGen, runStateGen_, uniformRM)
 import Utility.Interval (Interval (..))
+import Utility.Math (randomOnHemisphere)
 
 data Camera = Camera
   { origin :: !(V3 Float),
@@ -77,15 +76,23 @@ pixelSampleSquare c g = do
   return $ (u *^ c.pixelDeltaU) + (v *^ c.pixelDeltaV)
 
 rayColor :: (RandomGen g) => g -> Camera -> (Int, Int) -> HittableType -> V3 Float
-rayColor g c (x, y) world = runStateGen_ g $ \g' -> do
-  rays <- replicateM c.spp (getRay c x y g')
-  let color = foldl (\acc r -> acc + sampleRay r) (V3 0 0 0) rays
-  return $ color ^/ fromIntegral c.spp
+rayColor g c (x, y) world = color ^/ fromIntegral c.spp
   where
-    sampleRay ray
-      | Just rec <- hit world ray (Interval 0 (1 / 0)) =
-          0.5 * (rec.normal + 1)
-      | otherwise =
-          let unitDirection = normalize ray.direction
-              t = 0.5 * (unitDirection ^. _y + 1.0)
-           in lerp t (V3 0.5 0.7 1.0) (V3 1 1 1)
+    color = runStateGen_ g (go 0 c.spp)
+    go acc 0 _ = return acc
+    go acc n g' = do
+      r <- getRay c x y g'
+      sample <- samplePixel g' r world
+      go (acc + sample) (n - 1) g'
+
+samplePixel :: (StatefulGen g m) => g -> Ray -> HittableType -> m (V3 Float)
+samplePixel g ray world
+  | Just rec <- hit world ray (Interval 0 (1 / 0)) = do
+      direction <- randomOnHemisphere g rec.normal
+      let newRay = Ray rec.p direction
+      0.5 *^ samplePixel g newRay world
+  | otherwise =
+      return $
+        let unitDirection = normalize ray.direction
+            t = 0.5 * (unitDirection ^. _y + 1.0)
+         in lerp t (V3 0.5 0.7 1.0) (V3 1 1 1)
