@@ -28,10 +28,11 @@ hemisphereConcentricMapping s t = V3 (u * sqrtR) (v * sqrtR) (1.0 - rSqr)
             then (pi / 4.0 * (b / a), a)
             else (pi / 4.0 * (2.0 - a / b), b)
       | a < b = (pi / 4.0 * (4.0 + b / a), -a)
+      | b == 0 = (0, -b)
       | otherwise = (pi / 4.0 * (6.0 - a / b), -b)
     u = phi * cos theta
     v = phi * sin theta
-    rSqr = u * u - v * v
+    rSqr = u * u + v * v
     sqrtR = sqrt (2.0 - rSqr)
 
 lookRotation :: V3 Float -> V3 Float -> Quaternion Float

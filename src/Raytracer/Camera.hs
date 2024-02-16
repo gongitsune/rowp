@@ -87,7 +87,7 @@ rayColor g c (x, y) world = color ^/ fromIntegral c.spp
 
 samplePixel :: (StatefulGen g m) => g -> Ray -> HittableType -> m (V3 Float)
 samplePixel g ray world
-  | Just rec <- hit world ray (Interval 0 (1 / 0)) = do
+  | Just rec <- hit world ray (Interval 0.001 (1 / 0)) = do
       direction <- randomOnHemisphere g rec.normal
       let newRay = Ray rec.p direction
       0.5 *^ samplePixel g newRay world

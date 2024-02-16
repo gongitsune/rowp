@@ -32,7 +32,7 @@ camera =
         imageWidth = imgWidth,
         viewportHeight = 2.0,
         focalLength = 1.0,
-        spp = 100
+        spp = 50
       }
 
 world :: HittableType
@@ -48,7 +48,7 @@ render = do
 pixelFn :: Int -> Int -> PixelRGB8
 pixelFn x y = toPixel $ rayColor g camera (x, imgHeight - y - 1) world
   where
-    g = mkStdGen $ x * imgHeight + y + 42
+    g = mkStdGen $ x * imgHeight + y + 20
 
 toPixel :: V3 Float -> PixelRGB8
 toPixel c =
