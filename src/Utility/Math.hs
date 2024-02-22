@@ -1,13 +1,16 @@
-module Utility.Math
-  ( randomOnHemisphere,
-  )
+module Utility.Math (
+  randomOnHemisphere,
+)
 where
 
-import Linear.Metric
-import Linear.Quaternion
-import Linear.V3
-import Linear.Vector
-import System.Random.Stateful
+import Linear.Metric (Metric (dot), normalize)
+import Linear.Quaternion (Quaternion (..), rotate)
+import Linear.V3 (V3 (..), cross)
+import Linear.Vector ((^*))
+import System.Random.Stateful (
+  StatefulGen,
+  UniformRange (uniformRM),
+ )
 
 randomOnHemisphere :: (StatefulGen g m) => g -> V3 Float -> m (V3 Float)
 randomOnHemisphere g normal = do

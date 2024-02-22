@@ -4,4 +4,4 @@ import Raytracer.Renderer (render)
 
 main :: IO ()
 main = do
-    render
+  render

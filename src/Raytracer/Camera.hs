@@ -2,12 +2,12 @@
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE NoFieldSelectors #-}
 
-module Raytracer.Camera
-  ( rayColor,
-    createCamera,
-    CameraCreateInfo (..),
-    Camera,
-  )
+module Raytracer.Camera (
+  rayColor,
+  createCamera,
+  CameraCreateInfo (..),
+  Camera,
+)
 where
 
 import Control.Lens ((^.))
@@ -21,33 +21,33 @@ import Utility.Interval (Interval (..))
 import Utility.Math (randomOnHemisphere)
 
 data Camera = Camera
-  { origin :: !(V3 Float),
-    pixel00Loc :: !(V3 Float),
-    pixelDeltaU :: !(V3 Float),
-    pixelDeltaV :: !(V3 Float),
-    spp :: !Int
+  { origin :: !(V3 Float)
+  , pixel00Loc :: !(V3 Float)
+  , pixelDeltaU :: !(V3 Float)
+  , pixelDeltaV :: !(V3 Float)
+  , spp :: !Int
   }
   deriving (Show)
 
 data CameraCreateInfo = CameraCreateInfo
-  { origin :: !(V3 Float),
-    aspectRatio :: !Float,
-    imageHeight :: !Int,
-    imageWidth :: !Int,
-    viewportHeight :: !Float,
-    focalLength :: !Float,
-    spp :: !Int
+  { origin :: !(V3 Float)
+  , aspectRatio :: !Float
+  , imageHeight :: !Int
+  , imageWidth :: !Int
+  , viewportHeight :: !Float
+  , focalLength :: !Float
+  , spp :: !Int
   }
   deriving (Show)
 
 createCamera :: CameraCreateInfo -> Camera
 createCamera info =
   Camera
-    { origin = info.origin,
-      pixel00Loc,
-      pixelDeltaU,
-      pixelDeltaV,
-      spp = info.spp
+    { origin = info.origin
+    , pixel00Loc
+    , pixelDeltaU
+    , pixelDeltaV
+    , spp = info.spp
     }
   where
     viewportWidth = info.aspectRatio * info.viewportHeight
@@ -65,8 +65,8 @@ getRay c x y g = do
       pixelSample = pixelCenter + sample
   return
     Ray
-      { origin = c.origin,
-        direction = pixelSample - c.origin
+      { origin = c.origin
+      , direction = pixelSample - c.origin
       }
 
 pixelSampleSquare :: (StatefulGen g m) => Camera -> g -> m (V3 Float)

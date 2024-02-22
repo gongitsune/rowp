@@ -2,19 +2,20 @@
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE NoFieldSelectors #-}
 
-module Utility.Interval
-  ( Interval (..),
-    contains,
-    surrounds,
-    empty,
-    universe,
-  )
+module Utility.Interval (
+  Interval (..),
+  contains,
+  surrounds,
+  empty,
+  universe,
+)
 where
 
-data Interval a = (Ord a) =>
+data Interval a
+  = (Ord a) =>
   Interval
-  { lower :: a,
-    upper :: a
+  { lower :: a
+  , upper :: a
   }
 
 contains :: (Ord a) => Interval a -> a -> Bool

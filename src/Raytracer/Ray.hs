@@ -1,9 +1,9 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 
-module Raytracer.Ray
-  ( Ray (..),
-    at,
-  )
+module Raytracer.Ray (
+  Ray (..),
+  at,
+)
 where
 
 import Linear.V3 (V3)

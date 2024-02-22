@@ -26,13 +26,13 @@ camera :: Camera
 camera =
   createCamera
     CameraCreateInfo
-      { origin = V3 0 0 0,
-        aspectRatio,
-        imageHeight = imgHeight,
-        imageWidth = imgWidth,
-        viewportHeight = 2.0,
-        focalLength = 1.0,
-        spp = 50
+      { origin = V3 0 0 0
+      , aspectRatio
+      , imageHeight = imgHeight
+      , imageWidth = imgWidth
+      , viewportHeight = 2.0
+      , focalLength = 1.0
+      , spp = 50
       }
 
 world :: HittableType
