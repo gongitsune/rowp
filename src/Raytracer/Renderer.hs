@@ -11,7 +11,7 @@ import Raytracer.Camera (Camera, CameraCreateInfo (..), createCamera, rayColor)
 import Raytracer.Hittable (HittableType (..))
 import Raytracer.Scene (simpleScene)
 import System.Environment (getArgs)
-import System.Random.Stateful (mkStdGen)
+import System.Random.Stateful (mkStdGen, runStateGen_)
 
 aspectRatio :: Float
 aspectRatio = 16.0 / 9.0
@@ -33,6 +33,7 @@ camera =
       , viewportHeight = 2.0
       , focalLength = 1.0
       , spp = 50
+      , maxDepth = 10
       }
 
 world :: HittableType
@@ -46,13 +47,14 @@ render = do
   savePngImage path (ImageRGB8 img)
 
 pixelFn :: Int -> Int -> PixelRGB8
-pixelFn x y = toPixel $ rayColor g camera (x, imgHeight - y - 1) world
+pixelFn x y = toPixel $ runStateGen_ g $ rayColor camera (x, imgHeight - y - 1) world
   where
     g = mkStdGen $ x * imgHeight + y + 20
 
 toPixel :: V3 Float -> PixelRGB8
 toPixel c =
-  let ir = fromIntegral $ floorFloatInt (c ^. _x * 255.999)
-      ig = fromIntegral $ floorFloatInt (c ^. _y * 255.999)
-      ib = fromIntegral $ floorFloatInt (c ^. _z * 255.999)
-   in PixelRGB8 ir ig ib
+  let gamma = sqrt c
+      r = fromIntegral $ floorFloatInt (gamma ^. _x * 255.999)
+      g = fromIntegral $ floorFloatInt (gamma ^. _y * 255.999)
+      b = fromIntegral $ floorFloatInt (gamma ^. _z * 255.999)
+   in PixelRGB8 r g b

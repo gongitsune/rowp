@@ -16,7 +16,7 @@ import Linear.V3 (V3 (..), _y)
 import Linear.Vector (lerp, (*^), (^/))
 import Raytracer.Hittable (HitRecord (..), HittableType, hit)
 import Raytracer.Ray (Ray (..))
-import System.Random.Stateful (RandomGen, StatefulGen, runStateGen_, uniformRM)
+import System.Random.Stateful (StatefulGen, uniformRM)
 import Utility.Interval (Interval (..))
 import Utility.Math (randomOnHemisphere)
 
@@ -26,6 +26,7 @@ data Camera = Camera
   , pixelDeltaU :: !(V3 Float)
   , pixelDeltaV :: !(V3 Float)
   , spp :: !Int
+  , maxDepth :: !Int
   }
   deriving (Show)
 
@@ -37,6 +38,7 @@ data CameraCreateInfo = CameraCreateInfo
   , viewportHeight :: !Float
   , focalLength :: !Float
   , spp :: !Int
+  , maxDepth :: !Int
   }
   deriving (Show)
 
@@ -48,6 +50,7 @@ createCamera info =
     , pixelDeltaU
     , pixelDeltaV
     , spp = info.spp
+    , maxDepth = info.maxDepth
     }
   where
     viewportWidth = info.aspectRatio * info.viewportHeight
@@ -75,22 +78,23 @@ pixelSampleSquare c g = do
   v <- uniformRM (0, 1) g
   return $ (u *^ c.pixelDeltaU) + (v *^ c.pixelDeltaV)
 
-rayColor :: (RandomGen g) => g -> Camera -> (Int, Int) -> HittableType -> V3 Float
-rayColor g c (x, y) world = color ^/ fromIntegral c.spp
+rayColor :: (StatefulGen g m) => Camera -> (Int, Int) -> HittableType -> g -> m (V3 Float)
+rayColor c (x, y) world g = color ^/ fromIntegral c.spp
   where
-    color = runStateGen_ g (go 0 c.spp)
+    color = go 0 c.spp g
     go acc 0 _ = return acc
     go acc n g' = do
       r <- getRay c x y g'
-      sample <- samplePixel g' r world
+      sample <- samplePixel g' r c.maxDepth world
       go (acc + sample) (n - 1) g'
 
-samplePixel :: (StatefulGen g m) => g -> Ray -> HittableType -> m (V3 Float)
-samplePixel g ray world
+samplePixel :: (StatefulGen g m) => g -> Ray -> Int -> HittableType -> m (V3 Float)
+samplePixel _ _ 0 _ = return $ V3 0 0 0
+samplePixel g ray n world
   | Just rec <- hit world ray (Interval 0.001 (1 / 0)) = do
       direction <- randomOnHemisphere g rec.normal
-      let newRay = Ray rec.p direction
-      0.5 *^ samplePixel g newRay world
+      let newRay = Ray rec.p (direction + rec.normal)
+      0.5 *^ samplePixel g newRay (n - 1) world
   | otherwise =
       return $
         let unitDirection = normalize ray.direction
