@@ -14,11 +14,11 @@ import Control.Lens ((^.))
 import Linear.Metric (normalize)
 import Linear.V3 (V3 (..), _y)
 import Linear.Vector (lerp, (*^), (^/))
-import Raytracer.Hittable (HitRecord (..), HittableType, hit)
+import Raytracer.Hittable (HittableType, hit)
+import Raytracer.Material (HitRecord (mat), scatter)
 import Raytracer.Ray (Ray (..))
 import System.Random.Stateful (StatefulGen, uniformRM)
 import Utility.Interval (Interval (..))
-import Utility.Math (randomOnHemisphere)
 
 data Camera = Camera
   { origin :: !(V3 Float)
@@ -90,11 +90,14 @@ rayColor c (x, y) world g = color ^/ fromIntegral c.spp
 
 samplePixel :: (StatefulGen g m) => g -> Ray -> Int -> HittableType -> m (V3 Float)
 samplePixel _ _ 0 _ = return $ V3 0 0 0
-samplePixel g ray n world
+samplePixel g ray depth world
   | Just rec <- hit world ray (Interval 0.001 (1 / 0)) = do
-      direction <- randomOnHemisphere g rec.normal
-      let newRay = Ray rec.p (direction + rec.normal)
-      0.5 *^ samplePixel g newRay (n - 1) world
+      scatterResult <- scatter (rec.mat) ray rec g
+      case scatterResult of
+        Just (attenuation, scattered) -> do
+          sample <- samplePixel g scattered (depth - 1) world
+          return $ attenuation * sample
+        Nothing -> return $ V3 0 0 0
   | otherwise =
       return $
         let unitDirection = normalize ray.direction

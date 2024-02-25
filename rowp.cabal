@@ -63,6 +63,7 @@ library
                      ,Raytracer.Camera
                      ,Raytracer.Hittable
                      ,Raytracer.Scene
+                     ,Raytracer.Material
 
     -- Modules included in this library but not exported.
     other-modules:    Utility.Interval

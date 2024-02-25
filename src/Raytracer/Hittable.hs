@@ -12,22 +12,17 @@ where
 import Linear.Metric (dot)
 import Linear.V3 (V3 (..))
 import Linear.Vector ((^/))
+import Raytracer.Material (HitRecord (..), Material)
 import Raytracer.Ray (Ray (..))
 import Raytracer.Ray qualified as Ray
 import Utility.Interval (Interval (..), surrounds)
-
-data HitRecord = HitRecord
-  { p :: !(V3 Float)
-  , normal :: !(V3 Float)
-  , frontFace :: !Bool
-  , t :: !Float
-  }
 
 data HittableType
   = HittableList ![HittableType]
   | Sphere
       { center :: !(V3 Float)
       , radius :: !Float
+      , mat :: !Material
       }
 
 hit :: HittableType -> Ray -> Interval Float -> Maybe HitRecord
@@ -38,12 +33,12 @@ hit (HittableList hittables) r rayT = go Nothing rayT.upper hittables
     go rec closest (h : hs)
       | Just hitRec <- hit h r rayT{upper = closest} = go (Just hitRec) hitRec.t hs
       | otherwise = go rec closest hs
-hit (Sphere center radius) r rayT
+hit (Sphere center radius mat) r rayT
   | discriminant < 0 = Nothing
   | Just t <- closerT =
       let p = Ray.at r t
           (normal, frontFace) = faceNormal r ((p - center) ^/ radius)
-       in Just HitRecord{p, normal, frontFace, t}
+       in Just HitRecord{p, normal, mat, frontFace, t}
   | otherwise = Nothing
   where
     oc = r.origin - center
