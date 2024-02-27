@@ -5,6 +5,8 @@
 module Raytracer.Material where
 
 import Linear (Epsilon (nearZero), V3, normalize)
+import Linear.Metric (dot)
+import Linear.Vector ((*^))
 import Raytracer.Ray (Ray (..))
 import System.Random.Stateful (StatefulGen)
 import Utility.Math (randomUnitVector, reflect)
@@ -21,7 +23,9 @@ data Material
   = Lambertian
       {albedo :: !(V3 Float)}
   | Metal
-      {albedo :: !(V3 Float)}
+      { albedo :: !(V3 Float)
+      , fuzz :: !Float
+      }
 
 scatter :: (StatefulGen g m) => Material -> Ray -> HitRecord -> g -> m (Maybe (V3 Float, Ray))
 scatter (Lambertian albedo) _ rec g =
@@ -38,9 +42,14 @@ scatter (Lambertian albedo) _ rec g =
             }
         attenuation = albedo
     return $ Just (attenuation, scattered)
-scatter (Metal albedo) ray rec _ =
+scatter (Metal albedo fuzz) ray rec g =
   do
+    randomVec <- randomUnitVector g
     let reflected = reflect (normalize ray.direction) rec.normal
-        scattered = Ray{origin = rec.p, direction = reflected}
+        direction = reflected + fuzz *^ randomVec
+        scattered = Ray{origin = rec.p, direction}
         attenuation = albedo
-    return $ Just (attenuation, scattered)
+    return $
+      if direction `dot` rec.normal > 0
+        then Just (attenuation, scattered)
+        else Nothing
