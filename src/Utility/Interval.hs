@@ -8,6 +8,7 @@ module Utility.Interval (
   surrounds,
   empty,
   universe,
+  clamp,
 )
 where
 

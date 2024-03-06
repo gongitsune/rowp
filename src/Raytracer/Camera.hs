@@ -11,14 +11,15 @@ module Raytracer.Camera (
 where
 
 import Control.Lens ((^.))
-import Linear.Metric (normalize)
-import Linear.V3 (V3 (..), _y)
+import Linear.Metric (norm, normalize)
+import Linear.V3 (V3 (..), cross, _y)
 import Linear.Vector (lerp, (*^), (^/))
 import Raytracer.Hittable (HittableType, hit)
 import Raytracer.Material (HitRecord (mat), scatter)
 import Raytracer.Ray (Ray (..))
 import System.Random.Stateful (StatefulGen, uniformRM)
 import Utility.Interval (Interval (..))
+import Utility.Math (Radians (..), rad2Float)
 
 data Camera = Camera
   { origin :: !(V3 Float)
@@ -28,24 +29,23 @@ data Camera = Camera
   , spp :: !Int
   , maxDepth :: !Int
   }
-  deriving (Show)
 
 data CameraCreateInfo = CameraCreateInfo
-  { origin :: !(V3 Float)
-  , aspectRatio :: !Float
+  { aspectRatio :: !Float
   , imageHeight :: !Int
   , imageWidth :: !Int
-  , viewportHeight :: !Float
-  , focalLength :: !Float
   , spp :: !Int
   , maxDepth :: !Int
+  , vfov :: !Radians
+  , lookFrom :: !(V3 Float)
+  , lookAt :: !(V3 Float)
+  , vup :: !(V3 Float)
   }
-  deriving (Show)
 
 createCamera :: CameraCreateInfo -> Camera
 createCamera info =
   Camera
-    { origin = info.origin
+    { origin = info.lookFrom
     , pixel00Loc
     , pixelDeltaU
     , pixelDeltaV
@@ -53,10 +53,16 @@ createCamera info =
     , maxDepth = info.maxDepth
     }
   where
-    viewportWidth = info.aspectRatio * info.viewportHeight
-    viewportU = V3 viewportWidth 0 0
-    viewportV = V3 0 info.viewportHeight 0
-    viewportUL = info.origin - (viewportU / 2) - (viewportV / 2) - V3 0 0 info.focalLength
+    w = normalize $ info.lookFrom - info.lookAt
+    u = normalize $ info.vup `cross` w
+    v = w `cross` u
+    h = rad2Float $ tan (info.vfov / 2.0)
+    focalLength = norm (info.lookFrom - info.lookAt)
+    viewportHeight = 2.0 * h * focalLength
+    viewportWidth = info.aspectRatio * viewportHeight
+    viewportU = viewportWidth *^ u
+    viewportV = viewportHeight *^ (-v)
+    viewportUL = info.lookFrom - (viewportU / 2) - (viewportV / 2) - (focalLength *^ w)
     pixelDeltaU = viewportU ^/ fromIntegral info.imageWidth
     pixelDeltaV = viewportV ^/ fromIntegral info.imageHeight
     pixel00Loc = viewportUL + 0.5 * (pixelDeltaU + pixelDeltaV)
@@ -92,7 +98,7 @@ samplePixel :: (StatefulGen g m) => g -> Ray -> Int -> HittableType -> m (V3 Flo
 samplePixel _ _ 0 _ = return $ V3 0 0 0
 samplePixel g ray depth world
   | Just rec <- hit world ray (Interval 0.001 (1 / 0)) = do
-      scatterResult <- scatter (rec.mat) ray rec g
+      scatterResult <- scatter rec.mat ray rec g
       case scatterResult of
         Just (attenuation, scattered) -> do
           sample <- samplePixel g scattered (depth - 1) world

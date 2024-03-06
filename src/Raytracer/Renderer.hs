@@ -12,6 +12,7 @@ import Raytracer.Hittable (HittableType (..))
 import Raytracer.Scene (simpleScene)
 import System.Environment (getArgs)
 import System.Random.Stateful (mkStdGen, runStateGen_)
+import Utility.Math (deg2rad)
 
 aspectRatio :: Float
 aspectRatio = 16.0 / 9.0
@@ -26,14 +27,15 @@ camera :: Camera
 camera =
   createCamera
     CameraCreateInfo
-      { origin = V3 0 0 0
-      , aspectRatio
+      { aspectRatio
       , imageHeight = imgHeight
       , imageWidth = imgWidth
-      , viewportHeight = 2.0
-      , focalLength = 1.0
       , spp = 50
-      , maxDepth = 10
+      , maxDepth = 50
+      , vfov = deg2rad 20
+      , lookFrom = V3 (-2) 2 1
+      , lookAt = V3 0 0 (-1)
+      , vup = V3 0 1 0
       }
 
 world :: HittableType
@@ -47,7 +49,7 @@ render = do
   savePngImage path (ImageRGB8 img)
 
 pixelFn :: Int -> Int -> PixelRGB8
-pixelFn x y = toPixel $ runStateGen_ g $ rayColor camera (x, imgHeight - y - 1) world
+pixelFn x y = toPixel $ runStateGen_ g $ rayColor camera (x, y) world
   where
     g = mkStdGen $ x * imgHeight + y + 20
 

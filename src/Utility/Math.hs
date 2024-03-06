@@ -2,6 +2,13 @@ module Utility.Math (
   randomOnHemisphere,
   randomUnitVector,
   reflect,
+  refract,
+  Radians (..),
+  Degrees (..),
+  rad2deg,
+  deg2rad,
+  rad2Float,
+  deg2Float,
 )
 where
 
@@ -13,6 +20,27 @@ import System.Random.Stateful (
   StatefulGen,
   UniformRange (uniformRM),
  )
+
+newtype Radians = Radians Float deriving (Eq, Ord, Num, Fractional, Floating)
+newtype Degrees = Degrees Float deriving (Eq, Ord, Num, Fractional, Floating)
+
+instance Show Radians where
+  show (Radians r) = show r ++ " [rad]"
+
+instance Show Degrees where
+  show (Degrees d) = show d ++ " [deg]"
+
+rad2deg :: Radians -> Degrees
+rad2deg (Radians r) = Degrees (57.29577951308232 * r)
+
+deg2rad :: Degrees -> Radians
+deg2rad (Degrees d) = Radians (1.7453292519943295e-2 * d)
+
+rad2Float :: Radians -> Float
+rad2Float (Radians r) = r
+
+deg2Float :: Degrees -> Float
+deg2Float (Degrees d) = d
 
 randomOnHemisphere :: (StatefulGen g m) => g -> V3 Float -> m (V3 Float)
 randomOnHemisphere g normal = do
@@ -87,3 +115,10 @@ lookRotation forward up = Quaternion (cos phi) (t ^* sinPhi)
 
 reflect :: V3 Float -> V3 Float -> V3 Float
 reflect v n = v - 2 * (v `dot` n) *^ n
+
+refract :: V3 Float -> V3 Float -> Float -> V3 Float
+refract uv n etaiOverEtat =
+  let cosTheta = min (-(uv `dot` n)) 1.0
+      rOutPerp = etaiOverEtat *^ (uv + cosTheta *^ n)
+      rOutParallel = -(sqrt (abs (1.0 - dot rOutPerp rOutPerp)) *^ n)
+   in rOutPerp + rOutParallel
