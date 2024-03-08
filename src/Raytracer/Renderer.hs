@@ -9,7 +9,7 @@ import GHC.Float.RealFracMethods (floorFloatInt)
 import Linear.V3 (V3 (..), _x, _y, _z)
 import Raytracer.Camera (Camera, CameraCreateInfo (..), createCamera, rayColor)
 import Raytracer.Hittable (HittableType (..))
-import Raytracer.Scene (simpleScene)
+import Raytracer.Scene (randomSphereScene)
 import System.Environment (getArgs)
 import System.Random.Stateful (mkStdGen, runStateGen_)
 import Utility.Math (deg2rad)
@@ -18,7 +18,7 @@ aspectRatio :: Float
 aspectRatio = 16.0 / 9.0
 
 imgWidth :: Int
-imgWidth = 400
+imgWidth = 1200
 
 imgHeight :: Int
 imgHeight = floorFloatInt $ fromIntegral imgWidth / aspectRatio
@@ -33,23 +33,23 @@ camera =
       , spp = 50
       , maxDepth = 50
       , vfov = deg2rad 20
-      , lookFrom = V3 (-2) 2 1
-      , lookAt = V3 0 0 (-1)
+      , lookFrom = V3 13 2 3
+      , lookAt = V3 0 0 0
       , vup = V3 0 1 0
+      , defocusAngle = deg2rad 0.6
+      , focusDistance = 10.0
       }
-
-world :: HittableType
-world = simpleScene
 
 render :: IO ()
 render = do
   [path] <- getArgs
 
-  let img = generateImage pixelFn imgWidth imgHeight
+  let world = runStateGen_ (mkStdGen 0) randomSphereScene
+      img = generateImage (pixelFn world) imgWidth imgHeight
   savePngImage path (ImageRGB8 img)
 
-pixelFn :: Int -> Int -> PixelRGB8
-pixelFn x y = toPixel $ runStateGen_ g $ rayColor camera (x, y) world
+pixelFn :: HittableType -> Int -> Int -> PixelRGB8
+pixelFn world x y = toPixel $ runStateGen_ g $ rayColor camera (x, y) world
   where
     g = mkStdGen $ x * imgHeight + y + 20
 

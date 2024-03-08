@@ -11,15 +11,15 @@ module Raytracer.Camera (
 where
 
 import Control.Lens ((^.))
-import Linear.Metric (norm, normalize)
-import Linear.V3 (V3 (..), cross, _y)
+import Linear.Metric (normalize)
+import Linear.V3 (V3 (..), cross, _x, _y)
 import Linear.Vector (lerp, (*^), (^/))
 import Raytracer.Hittable (HittableType, hit)
 import Raytracer.Material (HitRecord (mat), scatter)
 import Raytracer.Ray (Ray (..))
 import System.Random.Stateful (StatefulGen, uniformRM)
 import Utility.Interval (Interval (..))
-import Utility.Math (Radians (..), rad2Float)
+import Utility.Math (Radians (..), rad2Float, randomInUnitDisk)
 
 data Camera = Camera
   { origin :: !(V3 Float)
@@ -28,6 +28,9 @@ data Camera = Camera
   , pixelDeltaV :: !(V3 Float)
   , spp :: !Int
   , maxDepth :: !Int
+  , defocusAngle :: !Radians
+  , defocusDiskU :: !(V3 Float)
+  , defocusDiskV :: !(V3 Float)
   }
 
 data CameraCreateInfo = CameraCreateInfo
@@ -40,6 +43,8 @@ data CameraCreateInfo = CameraCreateInfo
   , lookFrom :: !(V3 Float)
   , lookAt :: !(V3 Float)
   , vup :: !(V3 Float)
+  , defocusAngle :: !Radians
+  , focusDistance :: !Float
   }
 
 createCamera :: CameraCreateInfo -> Camera
@@ -51,32 +56,45 @@ createCamera info =
     , pixelDeltaV
     , spp = info.spp
     , maxDepth = info.maxDepth
+    , defocusAngle = info.defocusAngle
+    , defocusDiskU
+    , defocusDiskV
     }
   where
     w = normalize $ info.lookFrom - info.lookAt
     u = normalize $ info.vup `cross` w
     v = w `cross` u
     h = rad2Float $ tan (info.vfov / 2.0)
-    focalLength = norm (info.lookFrom - info.lookAt)
-    viewportHeight = 2.0 * h * focalLength
+    viewportHeight = 2.0 * h * info.focusDistance
     viewportWidth = info.aspectRatio * viewportHeight
     viewportU = viewportWidth *^ u
     viewportV = viewportHeight *^ (-v)
-    viewportUL = info.lookFrom - (viewportU / 2) - (viewportV / 2) - (focalLength *^ w)
+    viewportUL = info.lookFrom - (viewportU / 2) - (viewportV / 2) - (info.focusDistance *^ w)
     pixelDeltaU = viewportU ^/ fromIntegral info.imageWidth
     pixelDeltaV = viewportV ^/ fromIntegral info.imageHeight
     pixel00Loc = viewportUL + 0.5 * (pixelDeltaU + pixelDeltaV)
+    defocusRadius = info.focusDistance * tan (rad2Float info.defocusAngle / 2)
+    defocusDiskU = defocusRadius *^ u
+    defocusDiskV = defocusRadius *^ v
 
 getRay :: (StatefulGen g m) => Camera -> Int -> Int -> g -> m Ray
 getRay c x y g = do
   sample <- pixelSampleSquare c g
   let pixelCenter = c.pixel00Loc + (fromIntegral x *^ c.pixelDeltaU) + (fromIntegral y *^ c.pixelDeltaV)
       pixelSample = pixelCenter + sample
+  origin <- defocusDiskSample g
   return
     Ray
-      { origin = c.origin
-      , direction = pixelSample - c.origin
+      { origin
+      , direction = pixelSample - origin
       }
+  where
+    defocusDiskSample g' =
+      if c.defocusAngle <= 0
+        then return c.origin
+        else do
+          p <- randomInUnitDisk g'
+          return $ c.origin + (p ^. _x *^ c.defocusDiskU) + (p ^. _y *^ c.defocusDiskV)
 
 pixelSampleSquare :: (StatefulGen g m) => Camera -> g -> m (V3 Float)
 pixelSampleSquare c g = do

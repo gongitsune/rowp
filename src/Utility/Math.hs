@@ -9,12 +9,16 @@ module Utility.Math (
   deg2rad,
   rad2Float,
   deg2Float,
+  randomInUnitDisk,
+  randomV3,
 )
 where
 
+import Control.Lens ((^.))
 import Linear.Metric (Metric (dot), normalize)
 import Linear.Quaternion (Quaternion (..), rotate)
-import Linear.V3 (V3 (..), cross)
+import Linear.V2 (V2 (..))
+import Linear.V3 (V3 (..), cross, _x, _y)
 import Linear.Vector ((*^), (^*))
 import System.Random.Stateful (
   StatefulGen,
@@ -41,6 +45,9 @@ rad2Float (Radians r) = r
 
 deg2Float :: Degrees -> Float
 deg2Float (Degrees d) = d
+
+randomV3 :: (UniformRange a, StatefulGen g m) => (a, a) -> g -> m (V3 a)
+randomV3 range g = V3 <$> uniformRM range g <*> uniformRM range g <*> uniformRM range g
 
 randomOnHemisphere :: (StatefulGen g m) => g -> V3 Float -> m (V3 Float)
 randomOnHemisphere g normal = do
@@ -104,6 +111,23 @@ sphereConcentricMapping s t = V3 x y z
     x = r * sqrt (2.0 - r * r) * cos phi
     y = r * sqrt (2.0 - r * r) * sin phi
     z = (1 - r * r) * scale
+
+randomInUnitDisk :: (StatefulGen g m) => g -> m (V3 Float)
+randomInUnitDisk g = do
+  s <- uniformRM (0, 1) g
+  t <- uniformRM (0, 1) g
+  let p = circleConcentricMapping s t
+  return $ V3 (p ^. _x) (p ^. _y) 0
+
+circleConcentricMapping :: Float -> Float -> V2 Float
+circleConcentricMapping s t = V2 (r * cos theta) (r * sin theta)
+  where
+    u = 2.0 * s - 1.0
+    v = 2.0 * t - 1.0
+    (r, theta)
+      | u == 0 && v == 0 = (0, 0)
+      | abs u > abs v = (u, pi / 4 * (v / u))
+      | otherwise = (v, pi / 2 - pi / 4 * (u / v))
 
 lookRotation :: V3 Float -> V3 Float -> Quaternion Float
 lookRotation forward up = Quaternion (cos phi) (t ^* sinPhi)

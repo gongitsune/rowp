@@ -8,6 +8,8 @@
     "lambertian",
     "vfov",
     "lerp",
-    "quadrance"
+    "quadrance",
+    "defocus",
+    "foldl"
   ]
 }
